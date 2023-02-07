@@ -1,0 +1,330 @@
+using Microsoft.VisualBasic;
+using System;
+using System.Text;
+using System.Timers;
+using Timer = System.Threading.Timer;
+
+namespace Granny
+{
+    class Program
+    {
+
+        int level = 1;
+        private ConsoleKeyInfo cki;
+        private const int FieldWidght = 10;
+        private const int FieldHeight = 9;
+        private const int ScreenWidght = 63;
+        private const int ScreenHeight = 42;
+        int[,] GameField;
+        int vH = 8;
+        int vW = 3;
+        int GrannyH=6;
+        int GrannyW=3;
+        int track1X, track1Y;
+        bool quit = false;
+        int n;
+        static void Main(string[] args)
+        {
+            Program program = new Program();
+            program.Game();
+            Console.ReadKey();
+        }
+        void Game()
+        {
+            while (level <= 3)
+            {
+                quit = false;
+                Init();
+                SplashScreen();
+                Console.SetWindowSize(FieldWidght+10, FieldHeight+10);
+                Console.SetBufferSize(FieldWidght+10, FieldHeight+10);
+                vH = 8;
+                vW = 3;
+                LoadField();
+                PrintField();
+                while(vH!=1 || quit == false)
+                {
+                    GrannyRun();
+                    Collision();
+                    while (Console.KeyAvailable == false)
+                    {
+                        Collision1();
+                        if (quit == true) break;
+                        LoadField();
+                        PrintField();
+                        Thread.Sleep(1000 - level * 200);
+                        //cki = Console.ReadKey(true);
+                        if (vH == 1) break;
+                    }
+                    if (quit == true) break;
+                    if (vH == 1) break;
+                }                   
+                if (vH == 1)
+                {
+                    Init();
+                    YouWin();
+                    Console.ReadKey();
+                    level++;
+                }
+                else
+                {
+                    Init();
+                    GameOver();
+                    Console.ReadKey();
+                    quit = false;
+                    level = 1;
+                }
+            }
+        }
+        void Init() //ініціалізація
+        {
+            Console.CursorVisible = false;
+            Console.SetWindowSize(ScreenWidght, ScreenHeight);
+            Console.SetBufferSize(ScreenWidght, ScreenHeight);
+        }
+        void SplashScreen() //заставка
+        {
+            Console.Clear();
+            string[] s = new string[6];
+            s[0] = "█████▀███████████████████████████████████";
+            s[1] = "█─▄▄▄▄█▄─▄▄▀██▀▄─██▄─▀█▄─▄█▄─▀█▄─▄█▄─█─▄█";
+            s[2] = "█─██▄─██─▄─▄██─▀─███─█▄▀─███─█▄▀─███▄─▄██";
+            s[3] = "▀▄▄▄▄▄▀▄▄▀▄▄▀▄▄▀▄▄▀▄▄▄▀▀▄▄▀▄▄▄▀▀▄▄▀▀▄▄▄▀▀";
+            s[4] = "";
+            s[5] = "        created by <loonacurse>";
+            Console.ForegroundColor = ConsoleColor.Red;
+            for (int i = 0; i < s.Length; i++)
+            {
+                for (int j = 0; j < s[i].Length; j++)
+                {
+                    Console.SetCursorPosition(j + 10, i + 15);
+                    Console.Write(s[i][j]);
+                    //System.Console.Beep(1000, 1);
+                    //System.Threading.Thread.Sleep(20);
+                }
+            }
+            Console.SetCursorPosition(10, 23);
+            Console.Write("        >>Press any key to start\n");
+            Console.ResetColor();
+            Console.ReadKey();
+        }
+        void Frame()
+        {
+            char Pixel = '█';
+            int count = 0;
+            char[,] PixelFrame = new char[ScreenWidght, ScreenHeight];
+            for (int i = 1; i <= ScreenHeight; i++)
+            {
+                if (i == 42)
+                {
+                    for (int j = 1; j <= ScreenWidght; j++)
+                    {
+                        Console.Write(Pixel);
+                    }
+                }
+            }
+            for (int j = 1; j <= ScreenHeight - 1; j++)
+            {
+                for (int i = 1; i <= ScreenWidght; i++)
+                {
+                    if (i == 1 || i == 2)
+                    {
+                        Console.Write(Pixel);
+                    }
+                    else if (i == 62 || i == 63)
+                    {
+                        Console.Write(Pixel);
+                    }
+                    else
+                    {
+                        Console.Write(" ");
+                    }
+                }
+
+            }
+            Console.SetCursorPosition(2, 41);
+            do
+            {
+                Console.Write("█");
+                count++;
+            }
+            while (count <= 58);
+            // Console.Clear();
+        }//рамка
+        void Move()
+        {
+            for (int i = 2; i < FieldHeight - 1; i++)
+            {
+                for (int j = 0; j < FieldWidght; j++)
+                {
+                    if (i == 5)
+                    {
+                        GameField[i, j] = 0;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        if (i % 2 == 0)
+                        {
+                            if (j == 0 + n || j == 1 + n || j == 5 + n || j == 6 + n)
+                            {
+                                GameField[i, j] = 2;
+                            }
+                            else
+                            {
+                                GameField[i, j] = 0;
+                            }
+                        }
+                        else if (i % 2 == 1)
+                        {
+                            if (j == 2 - n || j == 3 - n || j == 7 - n || j == 8 - n)
+                            {
+                                GameField[i, j] = 2;
+                            }
+                            else
+                            {
+                                GameField[i, j] = 0;
+                            }
+                        }
+                    }                    
+                }
+            }
+        }
+        void LoadField() //загружає рівень
+        {
+            GameField = new int[FieldHeight, FieldWidght];
+            if (n != 5)
+            {
+                Move();
+                n++;
+            }
+            else if (n == 5)
+            {
+                n = 0;
+                Move();
+                n++;
+            }
+            GameField[vH, vW] = 1;
+        }
+        void PrintField()
+        {
+            Console.Clear();
+            for (int y = 1; y < FieldHeight; y++) 
+            {
+                for (int x = 0; x < FieldWidght; x++)
+                {
+                    Console.SetCursorPosition(x, y);
+                    switch (GameField[y, x])
+                    {
+                        case 0:
+                            Console.Write(" ");
+                            break;
+                        case 1:
+                            Console.ForegroundColor = ConsoleColor.White;
+                            Console.Write("█");
+                            break;
+                        case 2:
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.Write("Х");
+                            break;
+                    }
+                }
+            }
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.SetCursorPosition(0, 0);
+            Console.WriteLine($"<level {level}>");
+        }//прорисовка поля гри
+        bool Collision()
+        {
+            if (GameField[vH, vW] > 1) quit = true;
+            return quit;
+        }
+        bool Collision1() //бабуся врізається в авто
+        {
+            for(int i = 0; i < FieldHeight; i++)
+            {
+                for(int j = 1; j < FieldWidght; j++)
+                {
+                    if (j < FieldWidght - 1)
+                    {
+                        if (GameField[i, j - 1] == 2 && GameField[i, j] == 1)
+                        {
+                            quit = true;
+                        }
+                    
+                        else if (GameField[i, j+1] == 2 && GameField[i, j] == 1)
+                        {
+                            quit = true;
+                        }
+                    }                   
+
+                }
+            }
+
+            return quit;
+        }
+        void GrannyRun()
+        {
+            ConsoleKey key = Console.ReadKey().Key;
+            switch (key)
+            {
+                case ConsoleKey.UpArrow:
+                    vH = vH -1;
+                    vW = vW;
+                    break;
+                case ConsoleKey.LeftArrow:
+                    vH = vH;
+                    vW = vW - 1;
+                    break;
+                case ConsoleKey.RightArrow:
+                    vH = vH;
+                    vW = vW + 1;
+                    break;
+            }
+        }//керування бабульою
+        void GameOver()
+        {
+            Console.Clear();
+            string[] GameOver = new string[3];
+            GameOver[0] = "█─▄▄▄▄██▀▄─██▄─▀█▀─▄█▄─▄▄─███─▄▄─█▄─█─▄█▄─▄▄─█▄─▄▄▀█";
+            GameOver[1] = "█─██▄─██─▀─███─█▄█─███─▄█▀███─██─██▄▀▄███─▄█▀██─▄─▄█";
+            GameOver[2] = "▀▄▄▄▄▄▀▄▄▀▄▄▀▄▄▄▀▄▄▄▀▄▄▄▄▄▀▀▀▄▄▄▄▀▀▀▄▀▀▀▄▄▄▄▄▀▄▄▀▄▄▀";
+            Console.ForegroundColor = ConsoleColor.Red;
+            for (int i = 0; i < GameOver.Length; i++)
+            {
+                for (int j = 0; j < GameOver[i].Length; j++)
+                {
+                    Console.SetCursorPosition(j + 5, i + 15);
+                    Console.Write(GameOver[i][j]);
+                }
+            }
+            Console.SetCursorPosition(5, 23);
+            Console.Write("        <Press any key to try again>");
+            Console.ResetColor();
+            Console.ReadKey();
+        }//екран поразки
+        void YouWin()
+        {
+            Console.Clear();
+            string[] YouWin = new string[3];
+            YouWin[0] = "█▄─█─▄█─▄▄─█▄─██─▄███▄─█▀▀▀█─▄█▄─▄█▄─▀█▄─▄█░█";
+            YouWin[1] = "██▄─▄██─██─██─██─█████─█─█─█─███─███─█▄▀─██▄█";
+            YouWin[2] = "▀▀▄▄▄▀▀▄▄▄▄▀▀▄▄▄▄▀▀▀▀▀▄▄▄▀▄▄▄▀▀▄▄▄▀▄▄▄▀▀▄▄▀▄▀";
+            Console.ForegroundColor = ConsoleColor.Red;
+            for (int i = 0; i < YouWin.Length; i++)
+            {
+                for (int j = 0; j < YouWin[i].Length; j++)
+                {
+                    Console.SetCursorPosition(j + 10, i + 15);
+                    Console.Write(YouWin[i][j]);
+                }
+            }
+            Console.SetCursorPosition(10, 22);
+            Console.Write("            <Congratilations>");
+            Console.SetCursorPosition(10, 23);
+            Console.Write("            <Press any key to continue>");
+            Console.ResetColor();
+            Console.ReadKey();
+        }//екран перемоги
+    }
+}
